@@ -1,0 +1,43 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+model Event {
+  id           String   @id @default(uuid()) @db.Uuid
+  title        String   @map("event_title")
+  slug         String   @unique @map("event_slug")
+  totalResults Int      @map("total_results")
+  importedAt   DateTime @default(now()) @map("imported_at")
+  results      Result[]
+
+  @@map("events")
+}
+
+model Result {
+  id           String   @id @default(uuid()) @db.Uuid
+  eventId      String   @db.Uuid @map("event_id")
+  bibNumber    String   @map("bib_number")
+  athleteName  String   @map("athlete_name")
+  category     String
+  status       String
+  gender       String
+  rankGeneral  Int?     @map("rank_general")
+  rankCategory Int?     @map("rank_category")
+  timeGross    String?  @map("time_gross")
+  timeNet      String?  @map("time_net")
+  teamName     String?  @map("team_name")
+  event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, bibNumber])
+  @@index([eventId, rankGeneral])
+  @@index([eventId, gender, rankGeneral])
+  @@index([eventId, category, rankCategory])
+  @@index([eventId, athleteName])
+  @@map("results")
+}
