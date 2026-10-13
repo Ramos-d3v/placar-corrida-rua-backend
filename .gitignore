@@ -2,5 +2,7 @@ node_modules/
 .env
 .env.*
 !.env.example
+.agents/
+neon.ts
 coverage/
 *.log
