@@ -12,6 +12,18 @@ const exampleResult = {
   team_name: 'Equipe Horizonte',
 };
 
+const exampleUpdateAthlete = {
+  athlete_name: 'Ana Silva Santos',
+  category: 'Adulto 25-34',
+  status: 'Concluído',
+  gender: 'Feminino',
+  rank_general: 1,
+  rank_category: 1,
+  time_gross: '00:32:10.150',
+  time_net: '00:32:08.500',
+  team_name: 'Equipe Horizonte Pro',
+};
+
 const exampleImport = {
   event_title: 'Corrida de Demonstração',
   event_slug: 'corrida-de-demonstracao',
@@ -80,12 +92,15 @@ export const openApiDocument = {
     title: 'API de Resultados de Corrida',
     version: '1.0.0',
     description: [
-      'API para importar e consultar resultados de corridas de rua.',
+      'API para importar, atualizar e consultar resultados de corridas de rua em tempo real.',
       '',
-      '**Atenção:** os endpoints POST são públicos e não exigem credenciais.',
-      '`POST /api/results` substitui o evento e os resultados atuais.',
-      '`POST /api/results/reset` apaga todos os eventos e resultados.',
-      'Use os endpoints destrutivos somente em ambientes e dados de demonstração.',
+      '**Destaques de Operação e Persistência:**',
+      '- `POST /api/results`: Ingestão incremental via upsert (insere novos corredores e atualiza corredores existentes sem apagar o banco).',
+      '- `PUT /api/results/{bibNumber}`: Altera pontualmente os dados de um atleta específico por número de peito.',
+      '- `POST /api/results/reset`: **Única rota destrutiva**. Remove todos os eventos e resultados do banco.',
+      '- `GET /api/results`: Consulta paginada dos resultados com filtros por gênero, categoria e busca textual.',
+      '- `GET /api/results/{bibNumber}`: Consulta individual por número de peito.',
+      '- `POST /api/ingest/results`: Recepção assíncrona autenticada via fila para servidores externos de cronometragem.',
     ].join('\n'),
   },
   servers: [{
@@ -126,10 +141,11 @@ export const openApiDocument = {
         summary: 'Importar os resultados de uma corrida',
         operationId: 'importResults',
         description: [
-          'Importa um evento e seus resultados.',
+          'Importa ou atualiza os resultados de uma corrida via upsert incremental.',
           '',
-          '**Esta rota é pública e não exige credencial.** Cada envio substitui',
-          'integralmente o evento e os resultados atuais.',
+          '**Esta rota é pública e não exige credencial.** Realiza ingestão incremental:',
+          'insere novos participantes e substitui/atualiza dados dos participantes existentes pelo número de peito.',
+          '**Não apaga os dados existentes do banco**, evitando sobrecarga no sistema.',
           '`total_results` deve corresponder à quantidade de itens em `results`.',
           'O lote aceita até 50.000 participantes e o corpo da requisição até 10 MB.',
         ].join('\n'),
@@ -212,6 +228,12 @@ export const openApiDocument = {
             in: 'query',
             description: 'Buscar pelo nome do atleta ou parte do número de peito.',
             schema: { type: 'string', maxLength: 100, example: 'Ana' },
+          },
+          {
+            name: 'event_slug',
+            in: 'query',
+            description: 'Identificador do evento para consultar resultados específicos.',
+            schema: { type: 'string', example: 'corrida' },
           },
         ],
         responses: {
@@ -305,9 +327,10 @@ export const openApiDocument = {
         summary: 'Apagar todos os eventos e resultados',
         operationId: 'resetResults',
         description: [
-          '**Ação destrutiva:** remove todos os resultados e todos os eventos do banco.',
+          '**Ação destrutiva exclusiva:** remove todos os resultados e todos os eventos do banco.',
           '',
           'Esta rota é pública e não exige credencial. Não é necessário enviar corpo.',
+          'Esta é a **única rota** que apaga dados do sistema; rotas de importação e alteração não realizam exclusão.',
           'A operação pode ser repetida; quando o banco já está vazio, as contagens retornam zero.',
         ].join('\n'),
         responses: {
@@ -339,13 +362,21 @@ export const openApiDocument = {
         tags: ['Resultados'],
         summary: 'Consultar um participante pelo número de peito',
         operationId: 'getResultByBibNumber',
-        parameters: [{
-          name: 'bibNumber',
-          in: 'path',
-          required: true,
-          description: 'Número de peito do participante.',
-          schema: { type: 'string', example: '1001' },
-        }],
+        parameters: [
+          {
+            name: 'bibNumber',
+            in: 'path',
+            required: true,
+            description: 'Número de peito do participante.',
+            schema: { type: 'string', example: '1001' },
+          },
+          {
+            name: 'event_slug',
+            in: 'query',
+            description: 'Identificador do evento para consultar o participante específico.',
+            schema: { type: 'string', example: 'corrida' },
+          },
+        ],
         responses: {
           200: {
             description: 'Participante encontrado no evento atual.',
@@ -370,6 +401,71 @@ export const openApiDocument = {
           },
           429: rateLimitResponse,
           500: { description: 'Erro interno ao consultar o resultado.', ...errorResponse },
+        },
+      },
+      put: {
+        tags: ['Resultados'],
+        summary: 'Atualizar os dados de um atleta específico',
+        operationId: 'updateResultByBibNumber',
+        description: [
+          'Atualiza os dados de um atleta identificado pelo seu número de peito.',
+          '',
+          'Permite alterar nome, categoria, status, gênero, classificações (geral e categoria),',
+          'tempos (bruto e líquido) e equipe. A alteração afeta apenas o atleta especificado,',
+          'preservando todos os demais dados do banco de dados e notificando o placar ao vivo.',
+        ].join('\n'),
+        parameters: [{
+          name: 'bibNumber',
+          in: 'path',
+          required: true,
+          description: 'Número de peito do participante a ser atualizado.',
+          schema: { type: 'string', example: '1001' },
+        }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/UpdateResultRequest' },
+              example: exampleUpdateAthlete,
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Participante atualizado com sucesso.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/SingleResultResponse' },
+                example: {
+                  event: { title: eventExample.title, slug: eventExample.slug },
+                  result: {
+                    ...exampleResult,
+                    ...exampleUpdateAthlete,
+                  },
+                },
+              },
+            },
+          },
+          404: {
+            description: 'Resultado ou evento não encontrado.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+                example: { error: 'Resultado não encontrado' },
+              },
+            },
+          },
+          422: {
+            description: 'Campos inválidos ou nenhum campo informado para alteração.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ValidationError' },
+                example: validationErrorExample,
+              },
+            },
+          },
+          429: rateLimitResponse,
+          500: { description: 'Erro interno ao atualizar o resultado.', ...errorResponse },
         },
       },
     },
@@ -402,6 +498,38 @@ export const openApiDocument = {
             items: { $ref: '#/components/schemas/ImportedResult' },
           },
         },
+      },
+      UpdateResultRequest: {
+        type: 'object',
+        properties: {
+          athlete_name: { type: 'string', minLength: 1, maxLength: 200, example: 'Ana Silva Santos' },
+          category: { type: 'string', minLength: 1, maxLength: 80, example: 'Adulto 25-34' },
+          status: { type: 'string', minLength: 1, maxLength: 40, example: 'Concluído' },
+          gender: { type: 'string', minLength: 1, maxLength: 20, example: 'Feminino' },
+          rank_general: { type: 'integer', minimum: 1, nullable: true, example: 1 },
+          rank_category: { type: 'integer', minimum: 1, nullable: true, example: 1 },
+          time_gross: {
+            type: 'string',
+            nullable: true,
+            pattern: '^\\d{2,}:\\d{2}:\\d{2}\\.\\d{3}$',
+            example: '00:32:10.150',
+          },
+          time_net: {
+            type: 'string',
+            nullable: true,
+            pattern: '^\\d{2,}:\\d{2}:\\d{2}\\.\\d{3}$',
+            example: '00:32:08.500',
+          },
+          team_name: { type: 'string', maxLength: 200, nullable: true, example: 'Equipe Horizonte Pro' },
+          event_slug: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 120,
+            pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$',
+            example: 'corrida-de-demonstracao',
+          },
+        },
+        example: exampleUpdateAthlete,
       },
       ImportedResult: {
         type: 'object',

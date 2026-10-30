@@ -51,3 +51,18 @@ test('documents query validation and rate-limit response formats', () => {
   assert.deepEqual(invalidQueryExample.details[0].path, ['limit']);
   assert.equal(rateLimitContent['text/html'].example, 'Too many requests, please try again later.');
 });
+
+test('documents PUT /api/results/{bibNumber} with proper request body and schemas', () => {
+  const athletePath = openApiDocument.paths['/api/results/{bibNumber}'];
+  assert.ok(athletePath.put, 'PUT operation must be documented for /api/results/{bibNumber}');
+  assert.equal(athletePath.put.operationId, 'updateResultByBibNumber');
+  assert.equal(
+    athletePath.put.requestBody.content['application/json'].schema.$ref,
+    '#/components/schemas/UpdateResultRequest',
+  );
+  assert.ok(openApiDocument.components.schemas.UpdateResultRequest);
+  assert.ok(athletePath.put.responses[200]);
+  assert.ok(athletePath.put.responses[404]);
+  assert.ok(athletePath.put.responses[422]);
+});
+

@@ -59,7 +59,32 @@ export const resultsQuerySchema = z.object({
   gender: z.string().trim().min(1).optional(),
   category: z.string().trim().min(1).optional(),
   search: z.string().trim().min(1).max(100).optional(),
+  event_slug: z.string().trim().min(1).optional(),
 });
+
+export const updateResultSchema = z
+  .object({
+    athlete_name: z.string().trim().min(1).max(200).optional(),
+    category: z.string().trim().min(1).max(80).optional(),
+    status: z.string().trim().min(1).max(40).optional(),
+    gender: z.string().trim().min(1).max(20).optional(),
+    rank_general: z.number().int().positive().nullable().optional(),
+    rank_category: z.number().int().positive().nullable().optional(),
+    time_gross: raceTimeSchema,
+    time_net: raceTimeSchema,
+    team_name: z.string().trim().max(200).nullable().optional(),
+    event_slug: z
+      .string()
+      .trim()
+      .min(1)
+      .max(120)
+      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Use letras minúsculas, números e hífens')
+      .optional(),
+  })
+  .refine(
+    (data) => Object.keys(data).filter((k) => k !== 'event_slug').length > 0,
+    { message: 'Pelo menos um campo deve ser fornecido para atualização' },
+  );
 
 export function toPublicResult(result) {
   return {

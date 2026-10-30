@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { importResultsSchema, resultsQuerySchema, toPublicResult } from '../src/schemas/results.js';
+import { importResultsSchema, resultsQuerySchema, toPublicResult, updateResultSchema } from '../src/schemas/results.js';
 
 const validPayload = {
   event_title: 'TREINÃO NOTURNO',
@@ -41,6 +41,22 @@ test('rejects inconsistent totals, duplicate bib numbers, and malformed race tim
     ...validPayload,
     results: [{ ...validPayload.results[0], time_gross: '15:45' }],
   }).success, false);
+});
+
+test('accepts valid athlete updates and rejects empty payloads or invalid formats', () => {
+  const validUpdate = updateResultSchema.safeParse({
+    athlete_name: 'Novo Nome',
+    time_net: '00:30:15.123',
+    status: 'Concluído',
+  });
+  assert.equal(validUpdate.success, true);
+  assert.equal(validUpdate.data.athlete_name, 'Novo Nome');
+
+  const emptyUpdate = updateResultSchema.safeParse({});
+  assert.equal(emptyUpdate.success, false);
+
+  const malformedTime = updateResultSchema.safeParse({ time_net: '10:00' });
+  assert.equal(malformedTime.success, false);
 });
 
 test('defaults pagination and constrains page size', () => {

@@ -1,5 +1,5 @@
 import { importResultsSchema } from '../schemas/results.js';
-import { replaceEventResults, resetResults } from './results.js';
+import { resetResults, upsertEventResults } from './results.js';
 import { realtimePublisher } from './realtime-publisher.js';
 import { realtimeState } from './realtime-state.js';
 
@@ -15,7 +15,7 @@ export async function ingestResults(input) {
     };
   }
 
-  const imported = await replaceEventResults(payload);
+  const imported = await upsertEventResults(payload);
   const state = realtimeState.set(eventSlug, payload);
   const update = {
     ...state,

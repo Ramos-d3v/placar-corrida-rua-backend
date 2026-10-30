@@ -16,7 +16,7 @@ function normalizeEventSlug(value) {
 export function attachRealtimeServer(httpServer) {
   const io = new Server(httpServer, {
     cors: {
-      origin: env.frontendOrigins,
+      origin: env.frontendOrigins || "http://localhost:3001",
     },
   });
 
@@ -44,15 +44,20 @@ export function attachRealtimeServer(httpServer) {
   const onUpdate = (state) => {
     io.to(roomFor(state.event_slug)).emit('results.updated', state);
   };
+  const onAthleteUpdated = (update) => {
+    io.to(roomFor(update.event_slug)).emit('athlete.updated', update);
+  };
   const onReset = () => io.emit('results.reset');
 
   realtimePublisher.on('updated', onUpdate);
+  realtimePublisher.on('athlete.updated', onAthleteUpdated);
   realtimePublisher.on('reset', onReset);
 
   return {
     io,
     close() {
       realtimePublisher.off('updated', onUpdate);
+      realtimePublisher.off('athlete.updated', onAthleteUpdated);
       realtimePublisher.off('reset', onReset);
       return io.close();
     },

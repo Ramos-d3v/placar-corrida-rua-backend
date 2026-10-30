@@ -44,6 +44,22 @@ export class RealtimeStateStore {
     return this.get(eventSlug)?.version !== hashPayload(payload);
   }
 
+  updateAthlete(eventSlug, bibNumber, athleteData) {
+    const state = this.get(eventSlug);
+    if (!state || !state.payload || !Array.isArray(state.payload.results)) return null;
+
+    const idx = state.payload.results.findIndex((r) => r.bib_number === bibNumber);
+    if (idx !== -1) {
+      const current = state.payload.results[idx];
+      state.payload.results[idx] = {
+        ...current,
+        ...athleteData,
+      };
+      return this.set(eventSlug, state.payload);
+    }
+    return null;
+  }
+
   delete(eventSlug) {
     return this.#states.delete(eventSlug);
   }

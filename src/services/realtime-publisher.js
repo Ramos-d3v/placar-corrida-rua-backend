@@ -5,6 +5,10 @@ export class RealtimePublisher extends EventEmitter {
     this.emit('updated', state);
   }
 
+  publishAthleteUpdate(update) {
+    this.emit('athlete.updated', update);
+  }
+
   publishReset() {
     this.emit('reset');
   }

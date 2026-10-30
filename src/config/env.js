@@ -1,6 +1,6 @@
 import 'dotenv/config';
 
-const productionFrontendOrigin = 'https://cronoracingrua.vercel.app';
+const productionFrontendOrigin = 'https://cronoracingrua.vercel.app' || 'http://localhost:5174';
 
 const port = Number.parseInt(process.env.PORT ?? '3001', 10);
 
@@ -12,7 +12,7 @@ export const env = {
   ingestionApiKey: process.env.INGESTION_API_KEY ?? '',
   ingestionQueueMaxSize: Number.parseInt(process.env.INGESTION_QUEUE_MAX_SIZE ?? '10', 10),
   frontendOrigins: [
-    ...(process.env.FRONTEND_ORIGINS ?? 'http://localhost:5173')
+    ...(process.env.FRONTEND_ORIGINS ?? 'http://localhost:5174')
       .split(',')
       .map((origin) => origin.trim())
       .filter(Boolean),
