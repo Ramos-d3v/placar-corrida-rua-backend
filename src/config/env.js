@@ -1,15 +1,23 @@
 import 'dotenv/config';
 
+const productionFrontendOrigin = 'https://cronoracingrua.vercel.app';
+
+const port = Number.parseInt(process.env.PORT ?? '3001', 10);
+
 export const env = {
-  port: Number.parseInt(process.env.PORT ?? '3001', 10),
+  port,
+  baseUrl: process.env.BASE_URL ?? `http://localhost:${port}`,
   databaseUrl: process.env.DATABASE_URL,
   directUrl: process.env.DATABASE_URL_UNPOOLED,
   ingestionApiKey: process.env.INGESTION_API_KEY ?? '',
   ingestionQueueMaxSize: Number.parseInt(process.env.INGESTION_QUEUE_MAX_SIZE ?? '10', 10),
-  frontendOrigins: (process.env.FRONTEND_ORIGINS ?? 'http://localhost:5173')
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean),
+  frontendOrigins: [
+    ...(process.env.FRONTEND_ORIGINS ?? 'http://localhost:5173')
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean),
+    productionFrontendOrigin,
+  ].filter((origin, index, origins) => origins.indexOf(origin) === index),
 };
 
 export function assertRuntimeConfig() {
