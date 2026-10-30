@@ -95,6 +95,7 @@ export const openApiDocument = {
   tags: [
     { name: 'Status', description: 'Verificação da disponibilidade da API.' },
     { name: 'Resultados', description: 'Importação, limpeza e consulta dos resultados.' },
+    { name: 'Ingestão', description: 'Recepção autenticada de atualizações externas.' },
   ],
   paths: {
     '/health': {
@@ -254,6 +255,50 @@ export const openApiDocument = {
         },
       },
     },
+    '/api/ingest/results': {
+      post: {
+        tags: ['Ingestão'],
+        summary: 'Receber uma atualização externa de resultados',
+        operationId: 'ingestResults',
+        description: [
+          'Recebe um lote validado do servidor externo. ',
+          'A autenticação usa o header `X-Ingestion-API-Key`. ',
+          'Payloads idênticos ao último estado conhecido não geram nova publicação realtime.',
+        ].join(''),
+        security: [{ ingestionApiKey: [] }],
+        parameters: [{
+          name: 'X-Ingestion-API-Key',
+          in: 'header',
+          required: true,
+          schema: { type: 'string' },
+        }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ImportResultsRequest' },
+              example: exampleImport,
+            },
+          },
+        },
+        responses: {
+          202: {
+            description: 'Payload validado e aceito pela fila de processamento.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/IngestionAcceptedResponse' },
+              },
+            },
+          },
+          401: { description: 'API Key ausente ou inválida.', ...errorResponse },
+          413: { description: 'O corpo excede o limite de 10 MB.', ...errorResponse },
+          422: { description: 'Payload inválido.', ...errorResponse },
+          503: { description: 'A fila de ingestão está sem capacidade.', ...errorResponse },
+          429: rateLimitResponse,
+          500: { description: 'Erro interno ao processar a ingestão.', ...errorResponse },
+        },
+      },
+    },
     '/api/results/reset': {
       post: {
         tags: ['Resultados'],
@@ -330,6 +375,13 @@ export const openApiDocument = {
     },
   },
   components: {
+    securitySchemes: {
+      ingestionApiKey: {
+        type: 'apiKey',
+        in: 'header',
+        name: 'X-Ingestion-API-Key',
+      },
+    },
     schemas: {
       ImportResultsRequest: {
         type: 'object',
@@ -421,6 +473,20 @@ export const openApiDocument = {
         properties: {
           event: { $ref: '#/components/schemas/Event' },
           imported_count: { type: 'integer', minimum: 0, example: 1 },
+          accepted: { type: 'boolean', example: true },
+          changed: { type: 'boolean', example: true },
+          version: { type: 'string', nullable: true, example: 'sha256' },
+        },
+      },
+      IngestionAcceptedResponse: {
+        type: 'object',
+        required: ['accepted', 'changed', 'event_slug', 'request_id', 'queue_position'],
+        properties: {
+          accepted: { type: 'boolean', example: true },
+          changed: { type: 'boolean', nullable: true, example: null },
+          event_slug: { type: 'string', example: exampleImport.event_slug },
+          request_id: { type: 'string', format: 'uuid' },
+          queue_position: { type: 'integer', minimum: 1, example: 1 },
         },
       },
       ResultsListResponse: {

@@ -4,6 +4,7 @@ import { openApiDocument } from '../src/docs/openapi.js';
 
 test('documents every public API route and both destructive POST warnings', () => {
   assert.deepEqual(Object.keys(openApiDocument.paths).sort(), [
+    '/api/ingest/results',
     '/api/results',
     '/api/results/reset',
     '/api/results/{bibNumber}',
@@ -11,6 +12,7 @@ test('documents every public API route and both destructive POST warnings', () =
   ]);
 
   const importOperation = openApiDocument.paths['/api/results'].post;
+  const ingestionOperation = openApiDocument.paths['/api/ingest/results'].post;
   const resetOperation = openApiDocument.paths['/api/results/reset'].post;
 
   assert.match(importOperation.description, /é pública e não exige credencial/i);
@@ -18,6 +20,8 @@ test('documents every public API route and both destructive POST warnings', () =
   assert.match(resetOperation.description, /pública e não exige credencial/i);
   assert.match(resetOperation.description, /remove todos os resultados/i);
   assert.equal('requestBody' in resetOperation, false);
+  assert.deepEqual(ingestionOperation.security, [{ ingestionApiKey: [] }]);
+  assert.equal(ingestionOperation.parameters[0].name, 'X-Ingestion-API-Key');
 });
 
 test('all OpenAPI schema references resolve', () => {

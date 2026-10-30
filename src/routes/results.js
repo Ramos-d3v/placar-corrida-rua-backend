@@ -1,18 +1,18 @@
 import { Router } from 'express';
-import { importResultsSchema, resultsQuerySchema } from '../schemas/results.js';
-import { getResultByBibNumber, listResults, replaceEventResults, resetResults } from '../services/results.js';
+import { resultsQuerySchema } from '../schemas/results.js';
+import { getResultByBibNumber, listResults } from '../services/results.js';
+import { ingestResults, resetIngestedResults } from '../services/ingestion.js';
 
 export const resultsRouter = Router();
 
 resultsRouter.post('/', async (request, response) => {
-  const payload = importResultsSchema.parse(request.body);
-  const imported = await replaceEventResults(payload);
+  const imported = await ingestResults(request.body);
 
-  response.status(200).json({ ...imported, imported_count: payload.results.length });
+  response.status(200).json(imported);
 });
 
 resultsRouter.post('/reset', async (_request, response) => {
-  response.json(await resetResults());
+  response.json(await resetIngestedResults());
 });
 
 resultsRouter.get('/', async (request, response) => {

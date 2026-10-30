@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import swaggerUi from 'swagger-ui-express';
 import { env } from './config/env.js';
 import { openApiDocument } from './docs/openapi.js';
+import { ingestionRouter } from './routes/ingestion.js';
 import { resultsRouter } from './routes/results.js';
 
 export const app = express();
@@ -24,6 +25,7 @@ app.use('/swagger', swaggerUi.serve, swaggerUi.setup(openApiDocument, {
   customSiteTitle: 'API de Resultados - Swagger',
 }));
 app.get('/health', (_request, response) => response.json({ status: 'ok' }));
+app.use('/api/ingest', ingestionRouter);
 app.use('/api/results', resultsRouter);
 
 app.use((_request, response) => response.status(404).json({ error: 'Rota não encontrada' }));
@@ -41,6 +43,10 @@ app.use((error, _request, response, next) => {
 
   if (error?.message === 'Origem não permitida pela política CORS') {
     return response.status(403).json({ error: error.message });
+  }
+
+  if (error?.name === 'IngestionQueueFullError') {
+    return response.status(503).json({ error: error.message });
   }
 
   console.error('API request failed', error);

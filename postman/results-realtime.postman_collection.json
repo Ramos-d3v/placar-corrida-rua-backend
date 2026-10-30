@@ -1,0 +1,78 @@
+{
+  "info": {
+    "name": "Placar Corrida - Realtime Ingestion",
+    "_postman_id": "6b3bd5c5-ec2e-46f2-a4ef-4efb75f63c8f",
+    "description": "Envia dois POSTs de ingestao por ciclo. Use o runner com delay de 5000 ms entre os ciclos ou o script run-realtime-postman.ps1.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3001" },
+    { "key": "ingestionApiKey", "value": "replace-with-your-INGESTION_API_KEY" },
+    { "key": "eventSlug", "value": "corrida-de-teste-realtime" }
+  ],
+  "item": [
+    {
+      "name": "Ciclo 1 - estado inicial",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-Ingestion-API-Key", "value": "{{ingestionApiKey}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"event_title\": \"Corrida de Teste Realtime\",\n  \"event_slug\": \"{{eventSlug}}\",\n  \"total_results\": 1,\n  \"results\": [{\n    \"bib_number\": \"1\",\n    \"athlete_name\": \"Atleta Teste\",\n    \"category\": \"M30-34\",\n    \"status\": \"C\",\n    \"gender\": \"MASCULINO\",\n    \"rank_general\": 1,\n    \"rank_category\": 1,\n    \"time_gross\": \"00:35:10.000\",\n    \"time_net\": \"00:35:00.000\",\n    \"team_name\": \"Equipe Teste\"\n  }]\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/api/ingest/results"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Webhook aceita o payload', function () {",
+              "  pm.expect(pm.response.code).to.equal(202);",
+              "});",
+              "pm.test('Resposta informa a fila', function () {",
+              "  const body = pm.response.json();",
+              "  pm.expect(body.accepted).to.equal(true);",
+              "  pm.expect(body).to.have.property('request_id');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Ciclo 1 - estado alterado",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-Ingestion-API-Key", "value": "{{ingestionApiKey}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"event_title\": \"Corrida de Teste Realtime\",\n  \"event_slug\": \"{{eventSlug}}\",\n  \"total_results\": 1,\n  \"results\": [{\n    \"bib_number\": \"1\",\n    \"athlete_name\": \"Atleta Teste\",\n    \"category\": \"M30-34\",\n    \"status\": \"C\",\n    \"gender\": \"MASCULINO\",\n    \"rank_general\": 1,\n    \"rank_category\": 1,\n    \"time_gross\": \"00:34:50.000\",\n    \"time_net\": \"00:34:40.000\",\n    \"team_name\": \"Equipe Teste\"\n  }]\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/api/ingest/results"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Webhook aceita o segundo payload', function () {",
+              "  pm.expect(pm.response.code).to.equal(202);",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
