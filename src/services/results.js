@@ -14,6 +14,7 @@ function toDatabaseResult(result, eventId) {
     timeGross: result.time_gross ?? null,
     timeNet: result.time_net ?? null,
     teamName: result.team_name ?? null,
+    pace: result.pace ?? null,
   };
 }
 
@@ -58,6 +59,7 @@ export async function upsertEventResults(payload) {
                 timeGross: result.time_gross ?? null,
                 timeNet: result.time_net ?? null,
                 teamName: result.team_name ?? null,
+                pace: result.pace ?? null,
               },
               create: toDatabaseResult(result, event.id),
             }),
@@ -182,6 +184,7 @@ export async function updateResultByBibNumber(bibNumber, data, eventSlug = null)
   if (data.time_gross !== undefined) updateData.timeGross = data.time_gross;
   if (data.time_net !== undefined) updateData.timeNet = data.time_net;
   if (data.team_name !== undefined) updateData.teamName = data.team_name;
+  if (data.pace !== undefined) updateData.pace = data.pace;
 
   const updated = await prisma.result.update({
     where: { id: existing.id },

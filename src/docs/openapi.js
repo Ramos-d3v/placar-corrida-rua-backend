@@ -10,6 +10,7 @@ const exampleResult = {
   time_gross: '00:32:14.250',
   time_net: '00:32:10.800',
   team_name: 'Equipe Horizonte',
+  pace: '3:44 min/km',
 };
 
 const exampleUpdateAthlete = {
@@ -22,6 +23,7 @@ const exampleUpdateAthlete = {
   time_gross: '00:32:10.150',
   time_net: '00:32:08.500',
   team_name: 'Equipe Horizonte Pro',
+  pace: '4:10 min/km',
 };
 
 const exampleImport = {
@@ -39,6 +41,7 @@ const exampleImport = {
     time_gross: '00:32:14.250',
     time_net: '00:32:10.800',
     team_name: 'Equipe Horizonte',
+    pace: '3:44 min/km',
   }],
 };
 
@@ -228,7 +231,7 @@ export const openApiDocument = {
             in: 'query',
             description: 'Buscar pelo nome do atleta ou parte do número de peito.',
             schema: { type: 'string', maxLength: 100, example: 'Ana' },
-          },
+          },
           {
             name: 'event_slug',
             in: 'query',
@@ -411,7 +414,7 @@ export const openApiDocument = {
           'Atualiza os dados de um atleta identificado pelo seu número de peito.',
           '',
           'Permite alterar nome, categoria, status, gênero, classificações (geral e categoria),',
-          'tempos (bruto e líquido) e equipe. A alteração afeta apenas o atleta especificado,',
+          'tempos (bruto e líquido), equipe e pace. A alteração afeta apenas o atleta especificado,',
           'preservando todos os demais dados do banco de dados e notificando o placar ao vivo.',
         ].join('\n'),
         parameters: [{
@@ -521,6 +524,7 @@ export const openApiDocument = {
             example: '00:32:08.500',
           },
           team_name: { type: 'string', maxLength: 200, nullable: true, example: 'Equipe Horizonte Pro' },
+          pace: { type: 'string', maxLength: 20, nullable: true, example: '4:10 min/km' },
           event_slug: {
             type: 'string',
             minLength: 1,
@@ -555,6 +559,7 @@ export const openApiDocument = {
             example: '00:32:10.800',
           },
           team_name: { type: 'string', maxLength: 200, nullable: true, example: 'Equipe Horizonte' },
+          pace: { type: 'string', maxLength: 20, nullable: true, example: '3:44 min/km' },
         },
       },
       Event: {
@@ -579,7 +584,7 @@ export const openApiDocument = {
         type: 'object',
         required: [
           'id', 'bib_number', 'athlete_name', 'category', 'status', 'gender',
-          'rank_general', 'rank_category', 'time_gross', 'time_net', 'team_name',
+          'rank_general', 'rank_category', 'time_gross', 'time_net', 'team_name', 'pace',
         ],
         properties: {
           id: { type: 'string', format: 'uuid', example: exampleResult.id },
@@ -593,6 +598,7 @@ export const openApiDocument = {
           time_gross: { type: 'string', nullable: true, example: exampleResult.time_gross },
           time_net: { type: 'string', nullable: true, example: exampleResult.time_net },
           team_name: { type: 'string', nullable: true, example: exampleResult.team_name },
+          pace: { type: 'string', maxLength: 20, nullable: true, example: exampleResult.pace },
         },
       },
       ImportResultsResponse: {

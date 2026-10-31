@@ -32,6 +32,7 @@ model Result {
   timeGross    String?  @map("time_gross")
   timeNet      String?  @map("time_net")
   teamName     String?  @map("team_name")
+  pace         String?  @map("pace")
   event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, bibNumber])

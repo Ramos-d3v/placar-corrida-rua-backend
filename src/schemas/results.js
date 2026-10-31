@@ -6,6 +6,13 @@ const raceTimeSchema = z
   .nullable()
   .optional();
 
+const paceSchema = z
+  .string()
+  .trim()
+  .max(20)
+  .nullable()
+  .optional();
+
 const resultSchema = z.object({
   bib_number: z.string().trim().min(1).max(32),
   athlete_name: z.string().trim().min(1).max(200),
@@ -17,6 +24,7 @@ const resultSchema = z.object({
   time_gross: raceTimeSchema,
   time_net: raceTimeSchema,
   team_name: z.string().trim().max(200).nullable().optional(),
+  pace: paceSchema,
 });
 
 export const importResultsSchema = z
@@ -73,6 +81,7 @@ export const updateResultSchema = z
     time_gross: raceTimeSchema,
     time_net: raceTimeSchema,
     team_name: z.string().trim().max(200).nullable().optional(),
+    pace: paceSchema,
     event_slug: z
       .string()
       .trim()
@@ -99,5 +108,6 @@ export function toPublicResult(result) {
     time_gross: result.timeGross,
     time_net: result.timeNet,
     team_name: result.teamName,
+    pace: result.pace ?? null,
   };
 }
