@@ -16,8 +16,10 @@ function normalizeEventSlug(value) {
 export function attachRealtimeServer(httpServer) {
   const io = new Server(httpServer, {
     cors: {
-      origin: env.frontendOrigins || "http://localhost:3001",
+      origin: env.frontendOrigins,
+      methods: ['GET', 'POST'],
     },
+    path: '/socket.io',
   });
 
   io.on('connection', (socket) => {
